@@ -90,8 +90,7 @@ def get_sensor_data_loop():
     Mongo.get().temperatrue.insert(data)
 
 
-if __name__ == "__main__":
-    scheduler = Scheduler(60, get_sensor_data_loop)
-    scheduler.start()
-    app.run(host='0.0.0.0', debug=False, port=80)
-    scheduler.stop()
+scheduler = Scheduler(1800, get_sensor_data_loop)
+scheduler.start()
+# app.run(host='0.0.0.0', debug=False, port=80)
+# scheduler.stop()
