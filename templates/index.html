@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Sensors</title>
+</head>
+<body>
+<div id="container_r7000" style="min-width:400px;height:350px"></div>
+<br/><br/>
+
+<div id="container_pi" style="min-width:400px;height:350px"></div>
+<script src="{{url_for('static',filename='js/jquery-2.1.1.min.js')}}"></script>
+<script src="{{url_for('static',filename='js/highcharts.js')}}"></script>
+<script>
+    chart_data = {{temperature_data | safe}}
+    $(function () {
+        $('#container_r7000').highcharts({
+            chart: {
+                type: 'line'
+            },
+            title: {
+                text: 'R7000 Temperature'
+            },
+            xAxis: {
+                categories: chart_data['date']
+            },
+            yAxis: {
+                title: {
+                    text: 'Temperature (°C)'
+                }
+            },
+            plotOptions: {
+                line: {
+                    dataLabels: {
+                        enabled: true
+                    },
+                    enableMouseTracking: false
+                }
+            },
+            series: [{
+                name: 'cpu',
+                data: chart_data['R7000']['cpu']
+            }, {
+                name: 'wl1',
+                data: chart_data['R7000']['eth1']
+            }, {
+                name: 'wl2',
+                data: chart_data['R7000']['eth2']
+            }]
+        });
+        console.log(chart_data['RaspberryPi2']['cpu'])
+        $('#container_pi').highcharts({
+            chart: {
+                type: 'line'
+            },
+            title: {
+                text: 'Pi2 Temperature'
+            },
+            xAxis: {
+                categories: chart_data['date']
+            },
+            yAxis: {
+                title: {
+                    text: 'Temperature (°C)'
+                }
+            },
+            plotOptions: {
+                line: {
+                    dataLabels: {
+                        enabled: true
+                    },
+                    enableMouseTracking: false
+                }
+            },
+            series: [{
+                name: 'cpu',
+                data: chart_data['RaspberryPi2']['cpu']
+            }]
+        });
+    });
+</script>
+</body>
+</html>
