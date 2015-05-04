@@ -57,7 +57,7 @@ def index():
         'date': [],
     }
 
-    for doc in Mongo.get().temperatrue.find().limit(30).sort('_id', -1):
+    for doc in Mongo.get().temperatrue.find().limit(48).sort('_id', -1):
         temperature_data['R7000']['cpu'].append(doc['R7000']['temperature']['cpu'])
         temperature_data['R7000']['eth1'].append(doc['R7000']['temperature']['eth1'])
         temperature_data['R7000']['eth2'].append(doc['R7000']['temperature']['eth2'])
@@ -71,9 +71,6 @@ def index():
     temperature_data['date'] = temperature_data['date'][::-1]
 
     return render_template('index.html', temperature_data=json.dumps(temperature_data))
-
-
-res = Mongo.get().temperatrue.find().limit(30).sort('_id', -1)
 
 
 def get_sensor_data_loop():
