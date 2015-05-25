@@ -58,11 +58,16 @@ def index():
     }
 
     for doc in Mongo.get().temperatrue.find().limit(48).sort('_id', -1):
-        temperature_data['R7000']['cpu'].append(doc['R7000']['temperature']['cpu'])
-        temperature_data['R7000']['eth1'].append(doc['R7000']['temperature']['eth1'])
-        temperature_data['R7000']['eth2'].append(doc['R7000']['temperature']['eth2'])
-        temperature_data['RaspberryPi2']['cpu'].append(float(doc['RaspberryPi2']['temperature']['cpu']))
-        temperature_data['date'].append(time.strftime('%H:%M', time.localtime(int(doc['add_time']))))
+        doc['R7000']['temperature']['cpu'] and temperature_data['R7000']['cpu'].append(
+            doc['R7000']['temperature']['cpu'])
+        doc['R7000']['temperature']['eth1'] and temperature_data['R7000']['eth1'].append(
+            doc['R7000']['temperature']['eth1'])
+        doc['R7000']['temperature']['eth2'] and temperature_data['R7000']['eth2'].append(
+            doc['R7000']['temperature']['eth2'])
+        doc['RaspberryPi2']['temperature']['cpu'] and temperature_data['RaspberryPi2']['cpu'].append(
+            float(doc['RaspberryPi2']['temperature']['cpu']))
+        doc['add_time'] and temperature_data['date'].append(
+            time.strftime('%H:%M', time.localtime(int(doc['add_time']))))
 
     temperature_data['R7000']['cpu'] = temperature_data['R7000']['cpu'][::-1]
     temperature_data['R7000']['eth1'] = temperature_data['R7000']['eth1'][::-1]
