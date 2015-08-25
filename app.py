@@ -76,7 +76,7 @@ def index():
 def get_sensor_data_loop():
     data = {}
     try:
-        data = json.loads(urllib2.urlopen('http://10.0.0.10/sensor').read())
+        data = json.loads(urllib2.urlopen('http://127.0.0.1/sensor').read())
     finally:
         if not data:
             return
@@ -89,5 +89,5 @@ def get_sensor_data_loop():
 
 scheduler = Scheduler(10, get_sensor_data_loop)
 scheduler.start()
-app.run(host='0.0.0.0', debug=False, port=82)
+# app.run(host='0.0.0.0', debug=False, port=82)
 # scheduler.stop()
