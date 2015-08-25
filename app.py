@@ -76,7 +76,7 @@ def index():
 def get_sensor_data_loop():
     data = {}
     try:
-        data = json.loads(urllib2.urlopen('http://sensor.flysay.com/family_sensors').read())
+        data = json.loads(urllib2.urlopen('http://10.0.0.10/sensor').read())
     finally:
         if not data:
             return
