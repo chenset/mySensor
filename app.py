@@ -1,9 +1,10 @@
-from flask import Flask, render_template
+from flask import Flask, render_template, jsonify, make_response
 from threading import Timer
 import urllib2
 import time
 import json
 import pymongo
+import os
 
 
 class Scheduler(object):
@@ -73,6 +74,15 @@ def index():
     return render_template('index.html', temperature_data=json.dumps(temperature_data))
 
 
+@app.route('/nas')
+def nas():
+    html = ''
+    with os.popen('sensors;hddtemp /dev/sda;hddtemp /dev/sdb') as f:
+        html += f.read()
+
+    return make_response('<pre>' + html + '</pre>')
+
+
 def get_sensor_data_loop():
     data = {}
     try:
@@ -89,5 +99,5 @@ def get_sensor_data_loop():
 
 scheduler = Scheduler(1800, get_sensor_data_loop)
 scheduler.start()
-# app.run(host='0.0.0.0', debug=False, port=82)
-# scheduler.stop()
+app.run(host='0.0.0.0', debug=True, port=82)
+scheduler.stop()
