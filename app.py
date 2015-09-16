@@ -1,10 +1,10 @@
-from flask import Flask, render_template, jsonify, make_response
+from flask import Flask, render_template, jsonify, make_response, request
 from threading import Timer
-import urllib2
 import time
 import json
 import pymongo
 import os
+import re
 
 
 class Scheduler(object):
@@ -53,51 +53,110 @@ app = Flask(__name__)
 @app.route('/')
 def index():
     temperature_data = {
-        'R7000': {'cpu': [], 'eth1': [], 'eth2': []},
-        'RaspberryPi2': {'cpu': []},
-        'date': [],
+        'NAS': dict(),
+        # 'R7000': {'cpu': [], 'eth1': [], 'eth2': []},
+        # 'RaspberryPi2': {'cpu': []},
+        # 'date': [],
     }
+    start_time = time.time()
+    for v in Mongo.get().sensor.find().sort('_id', -1):
+        temperature_data['NAS'].setdefault('CPU', [])
+        temperature_data['NAS']['CPU'].append(v['CPU'])
 
-    for doc in Mongo.get().temperatrue.find().limit(48).sort('_id', -1):
-        temperature_data['R7000']['cpu'].append(doc['R7000']['temperature']['cpu'] or None)
-        temperature_data['R7000']['eth1'].append(doc['R7000']['temperature']['eth1'] or None)
-        temperature_data['R7000']['eth2'].append(doc['R7000']['temperature']['eth2'] or None)
-        temperature_data['RaspberryPi2']['cpu'].append(float(doc['RaspberryPi2']['temperature']['cpu']) or None)
-        temperature_data['date'].append(time.strftime('%H:%M', time.localtime(int(doc['add_time']))) or '-')
+    print round((time.time() - start_time) * 1000, 3), 'ms when get data'
+    print temperature_data
 
-    temperature_data['R7000']['cpu'] = temperature_data['R7000']['cpu'][::-1]
-    temperature_data['R7000']['eth1'] = temperature_data['R7000']['eth1'][::-1]
-    temperature_data['R7000']['eth2'] = temperature_data['R7000']['eth2'][::-1]
-    temperature_data['RaspberryPi2']['cpu'] = temperature_data['RaspberryPi2']['cpu'][::-1]
-    temperature_data['date'] = temperature_data['date'][::-1]
+
+    # for doc in Mongo.get().temperatrue.find().limit(48).sort('_id', -1):
+    # temperature_data['R7000']['cpu'].append(doc['R7000']['temperature']['cpu'] or None)
+    # temperature_data['R7000']['eth1'].append(doc['R7000']['temperature']['eth1'] or None)
+    # temperature_data['R7000']['eth2'].append(doc['R7000']['temperature']['eth2'] or None)
+    # temperature_data['RaspberryPi2']['cpu'].append(float(doc['RaspberryPi2']['temperature']['cpu']) or None)
+    # temperature_data['date'].append(time.strftime('%H:%M', time.localtime(int(doc['add_time']))) or '-')
+    #
+    # temperature_data['R7000']['cpu'] = temperature_data['R7000']['cpu'][::-1]
+    # temperature_data['R7000']['eth1'] = temperature_data['R7000']['eth1'][::-1]
+    # temperature_data['R7000']['eth2'] = temperature_data['R7000']['eth2'][::-1]
+    # temperature_data['RaspberryPi2']['cpu'] = temperature_data['RaspberryPi2']['cpu'][::-1]
+    # temperature_data['date'] = temperature_data['date'][::-1]
 
     return render_template('index.html', temperature_data=json.dumps(temperature_data))
 
 
 @app.route('/nas')
 def nas():
-    html = ''
-    with os.popen('sensors;hddtemp /dev/sda;hddtemp /dev/sdb') as f:
-        html += f.read()
+    data = {}
+    with os.popen('sensors;hddtemp /dev/sda;hddtemp /dev/sdb;free -m;w') as f:
+        res = f.read()
 
-    return make_response('<pre>' + html + '</pre>')
+        # CPU
+        cpu_pattern = r'Core\s\d:\s+\+(\d+\.?\d*)'
+        cpu_re = re.compile(cpu_pattern)
+        cpu = [float(l) for l in cpu_re.findall(res)]
+        data.setdefault('CPU', round(sum(cpu) / len(cpu), 2))
+        index = 0
+        for i in cpu:
+            data.setdefault('Core' + str(index), float(i))
+            index += 1
+
+        # SYS
+        sys_pattern = r'(SYSTIN|CPUTIN|AUXTIN):\s+\+(\d+\.?\d*)'
+        sys_re = re.compile(sys_pattern)
+        for (k, v) in sys_re.findall(res):
+            data.setdefault(k, float(v))
+
+        # HDD
+        hdd_pattern = r'(/dev/sd\w{1}):[^:]+:\s+(\d+\.?\d*)'
+        hdd_re = re.compile(hdd_pattern)
+        for (k, v) in hdd_re.findall(res):
+            data.setdefault(k, float(v))
+
+        # RAM
+        ram_pattern = r'Mem:\s+(\d+)\s+(\d+)\s+(\d+)[\s\S]+buffers/cache:\s+(\d+)\s+(\d+)'
+        ram_re = re.compile(ram_pattern)
+        ram_res = list(ram_re.findall(res)[0])
+        data.setdefault('RAM real free', int(ram_res.pop()))
+        data.setdefault('RAM real used', int(ram_res.pop()))
+        data.setdefault('RAM free', int(ram_res.pop()))
+        data.setdefault('RAM used', int(ram_res.pop()))
+        data.setdefault('RAM total', int(ram_res.pop()))
+
+        # load
+        load_pattern = r'load\s{1}average:\s{1}(\d+\.?\d*),\s{1}(\d+\.?\d*),\s{1}(\d+\.?\d*)'
+        load_re = re.compile(load_pattern)
+        load_res = list(load_re.findall(res)[0])
+        data.setdefault('Load 15 min', float(load_res.pop()))
+        data.setdefault('Load 5 min', float(load_res.pop()))
+        data.setdefault('Load 1 min', float(load_res.pop()))
+
+        # users
+        other_pattern = r'\s+(\d+)\s{1}users,'
+        other_re = re.compile(other_pattern)
+        for i in other_re.findall(res):
+            data.setdefault('users', int(i))
+
+    # runtime
+    with open('/proc/uptime', 'r') as f:
+        data.setdefault('runtime', int(float(f.read().split(' ')[0])))
+    # print request
+
+    try:
+        return jsonify(data)
+    except:
+        return data
+
+        # return make_response('<pre>' + res + '</pre><br/>' + json.dumps(data))
 
 
 def get_sensor_data_loop():
-    data = {}
-    try:
-        data = json.loads(urllib2.urlopen('http://127.0.0.1/sensor').read())
-    finally:
-        if not data:
-            return
+    nas_data = nas()
+    if 'add_time' not in nas_data:
+        nas_data['add_time'] = int(time.time())
 
-    if 'add_time' not in data:
-        data['add_time'] = int(time.time())
-
-    Mongo.get().temperatrue.insert(data)
+    Mongo.get().sensor.insert(nas_data)
 
 
-# scheduler = Scheduler(1800, get_sensor_data_loop)
+# scheduler = Scheduler(3, get_sensor_data_loop)
 # scheduler.start()
-app.run(host='0.0.0.0', debug=False, port=88)
+app.run(host='0.0.0.0', debug=True, port=88)
 # scheduler.stop()
