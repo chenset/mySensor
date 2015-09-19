@@ -101,6 +101,11 @@ def pi():
     return make_response('<pre>' + data + '</pre>')
 
 
+@app.route('/route')
+def route():
+    with os.popen('ssh -i ~/.ssh/route.ssl admin@10.0.0.1 "cat /proc/dmu/temperature;wl -i eth1 phy_tempsense;wl -i eth2 phy_tempsense"') as f:
+        return make_response('<pre>' + f.read() + '</pre>')
+
 @app.route('/nas')
 def nas():
     data = {}
