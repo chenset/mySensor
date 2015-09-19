@@ -86,7 +86,7 @@ def index():
 @app.route('/nas')
 def nas():
     data = {}
-    with os.popen('sensors;hddtemp /dev/sda;hddtemp /dev/sdb;free -m;w') as f:
+    with os.popen('sensors;free -m;w') as f:
         res = f.read()
 
         # CPU
