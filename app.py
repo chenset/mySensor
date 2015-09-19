@@ -104,12 +104,12 @@ def nas():
         sys_re = re.compile(sys_pattern)
         for (k, v) in sys_re.findall(res):
             data.setdefault(k, float(v))
-
-        # HDD
-        hdd_pattern = r'(/dev/sd\w{1}):[^:]+:\s+(\d+\.?\d*)'
-        hdd_re = re.compile(hdd_pattern)
-        for (k, v) in hdd_re.findall(res):
-            data.setdefault(k, float(v))
+        #
+        # # HDD
+        # hdd_pattern = r'(/dev/sd\w{1}):[^:]+:\s+(\d+\.?\d*)'
+        # hdd_re = re.compile(hdd_pattern)
+        # for (k, v) in hdd_re.findall(res):
+        #     data.setdefault(k, float(v))
 
         # RAM
         ram_pattern = r'Mem:\s+(\d+)\s+(\d+)\s+(\d+)[\s\S]+buffers/cache:\s+(\d+)\s+(\d+)'
@@ -156,7 +156,7 @@ def get_sensor_data_loop():
     Mongo.get().sensor.insert(nas_data)
 
 
-scheduler = Scheduler(3, get_sensor_data_loop)
+scheduler = Scheduler(30, get_sensor_data_loop)
 scheduler.start()
 # app.run(host='0.0.0.0', debug=True, port=88)
 # scheduler.stop()
