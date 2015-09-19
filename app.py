@@ -5,6 +5,9 @@ import json
 import pymongo
 import os
 import re
+import urllib2
+
+POINT_INTERVAL = 30
 
 
 class Scheduler(object):
@@ -52,19 +55,27 @@ app = Flask(__name__)
 
 @app.route('/')
 def index():
+    global POINT_INTERVAL
     temperature_data = {
-        'NAS': dict(),
+        'NAS': {
+            'point_start': None,
+            'point_interval': POINT_INTERVAL,
+        },
         # 'R7000': {'cpu': [], 'eth1': [], 'eth2': []},
         # 'RaspberryPi2': {'cpu': []},
         # 'date': [],
     }
     start_time = time.time()
-    for v in Mongo.get().sensor.find().sort('_id', -1):
+
+    for v in Mongo.get().sensor.find():
+        if not temperature_data['NAS']['point_start']:
+            temperature_data['NAS']['point_start'] = v['add_time']
+
         temperature_data['NAS'].setdefault('CPU', [])
         temperature_data['NAS']['CPU'].append(v['CPU'])
 
     print round((time.time() - start_time) * 1000, 3), 'ms when get data'
-    print temperature_data
+
 
 
     # for doc in Mongo.get().temperatrue.find().limit(48).sort('_id', -1):
@@ -81,6 +92,13 @@ def index():
     # temperature_data['date'] = temperature_data['date'][::-1]
 
     return render_template('index.html', temperature_data=json.dumps(temperature_data))
+
+
+@app.route('/pi')
+def pi():
+    # with os.popen('ssh -i ~/.ssh/pi.ssl 10.0.0.10 "w"') as f:
+    data = urllib2.urlopen('http://10.0.0.10/sensor').read()
+    return make_response('<pre>' + data + '</pre>')
 
 
 @app.route('/nas')
@@ -156,7 +174,7 @@ def get_sensor_data_loop():
     Mongo.get().sensor.insert(nas_data)
 
 
-scheduler = Scheduler(30, get_sensor_data_loop)
-scheduler.start()
-# app.run(host='0.0.0.0', debug=True, port=88)
+# scheduler = Scheduler(POINT_INTERVAL, get_sensor_data_loop)
+# scheduler.start()
+app.run(host='0.0.0.0', debug=True, port=88)
 # scheduler.stop()
