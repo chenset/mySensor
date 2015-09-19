@@ -158,5 +158,5 @@ def get_sensor_data_loop():
 
 # scheduler = Scheduler(3, get_sensor_data_loop)
 # scheduler.start()
-app.run(host='0.0.0.0', debug=True, port=88)
+# app.run(host='0.0.0.0', debug=True, port=88)
 # scheduler.stop()
