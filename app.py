@@ -156,7 +156,7 @@ def get_sensor_data_loop():
     Mongo.get().sensor.insert(nas_data)
 
 
-# scheduler = Scheduler(3, get_sensor_data_loop)
-# scheduler.start()
+scheduler = Scheduler(3, get_sensor_data_loop)
+scheduler.start()
 # app.run(host='0.0.0.0', debug=True, port=88)
 # scheduler.stop()
