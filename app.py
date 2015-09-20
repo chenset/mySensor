@@ -1,4 +1,4 @@
-from flask import Flask, render_template, jsonify, make_response, request
+from flask import Flask, render_template, jsonify, make_response
 from threading import Timer
 import time
 import json
@@ -7,7 +7,7 @@ import os
 import re
 import urllib2
 
-POINT_INTERVAL = 30
+POINT_INTERVAL = 60 * 10
 
 
 class Scheduler(object):
@@ -63,30 +63,49 @@ def index():
         },
     }
     start_time = time.time()
-    for v in list(Mongo.get().sensor.find().limit(4320)):
+    for v in list(Mongo.get().nas.find().limit(4320)):
         if not temperature_data['NAS']['point_start']:
             temperature_data['NAS']['point_start'] = v['add_time']
 
         temperature_data['NAS'].setdefault('CPU', [])
-        temperature_data['NAS']['CPU'].append(v['CPU'])
+        temperature_data['NAS']['CPU'].append(float(v['CPU']))
 
     print round((time.time() - start_time) * 1000, 3), 'ms when get data'
-
+    print temperature_data
     return render_template('index.html', temperature_data=json.dumps(temperature_data))
+
+
+def pi_sensor():
+    return json.loads(urllib2.urlopen('http://10.0.0.10/sensor').read())
 
 
 @app.route('/pi')
 def pi():
-    # with os.popen('ssh -i ~/.ssh/pi.ssl 10.0.0.10 "w"') as f:
-    data = urllib2.urlopen('http://10.0.0.10/sensor').read()
-    return make_response('<pre>' + data + '</pre>')
+    return jsonify(pi_sensor())
+
+
+def route_sensor():
+    with os.popen(
+            'ssh -i ~/.ssh/route.ssl admin@10.0.0.1 "cat /proc/dmu/temperature;echo \'eth1 :\';wl -i eth1 phy_tempsense 2>/dev/null;echo \'eth2 :\';wl -i eth2 phy_tempsense 2>/dev/null"') as f:
+        res = f.read()
+
+        route_pattern = r'CPU\s{1}temperature\s{1}:\s{1}(\d+\.?\d*)[^e]*(eth1)[^\d]*(\d*)[^\n]*\n{1}(eth2)[^\d]*(\d*)'
+        route_re = re.compile(route_pattern)
+
+        route_res = route_re.findall(res)
+
+        data = {
+            'CPU': route_res[0][0],
+            route_res[0][1]: int(route_res[0][2] if route_res[0][2] else 0),
+            route_res[0][3]: int(route_res[0][4] if route_res[0][4] else 0),
+        }
+
+        return data
 
 
 @app.route('/route')
 def route():
-    with os.popen(
-            'ssh -i ~/.ssh/route.ssl admin@10.0.0.1 "cat /proc/dmu/temperature;wl -i eth1 phy_tempsense;wl -i eth2 phy_tempsense"') as f:
-        return make_response('<pre>' + f.read() + '</pre>')
+    return jsonify(route_sensor())
 
 
 def nas_sensor():
@@ -155,16 +174,37 @@ def nas():
 
 @app.route('/loop')
 def get_sensor_data_loop():
-    nas_data = nas_sensor()
-    if 'add_time' not in nas_data:
-        nas_data['add_time'] = int(time.time())
+    try:
+        nas_data = nas_sensor()
+        if 'add_time' not in nas_data:
+            nas_data['add_time'] = int(time.time())
 
-    Mongo.get().sensor.insert(nas_data)
+        Mongo.get().nas.insert(nas_data)
+    except:
+        pass
+
+    try:
+        pi_data = pi_sensor()
+        if 'add_time' not in pi_data:
+            pi_data['add_time'] = int(time.time())
+
+        Mongo.get().pi.insert(pi_data)
+    except:
+        pass
+
+    try:
+        route_data = route_sensor()
+        if 'add_time' not in route_data:
+            route_data['add_time'] = int(time.time())
+
+        Mongo.get().route.insert(route_data)
+    except:
+        pass
 
     return make_response('success')
 
 
 # scheduler = Scheduler(POINT_INTERVAL, get_sensor_data_loop)
 # scheduler.start()
-# app.run(host='0.0.0.0', debug=True, port=90)
+app.run(host='0.0.0.0', debug=True, port=90)
 # scheduler.stop()

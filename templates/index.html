@@ -17,8 +17,9 @@
 <script src="{{ url_for('static',filename='js/highcharts.js') }}"></script>
 <script>
 
-
+{#    console.log({{temperature_data}});#}
     chart_data = {{temperature_data | safe}}
+            console.log(chart_data);
             $(function () {
 
                 Highcharts.setOptions({
