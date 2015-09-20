@@ -61,13 +61,9 @@ def index():
             'point_start': None,
             'point_interval': POINT_INTERVAL,
         },
-        # 'R7000': {'cpu': [], 'eth1': [], 'eth2': []},
-        # 'RaspberryPi2': {'cpu': []},
-        # 'date': [],
     }
     start_time = time.time()
-
-    for v in Mongo.get().sensor.find():
+    for v in list(Mongo.get().sensor.find().limit(4320)):
         if not temperature_data['NAS']['point_start']:
             temperature_data['NAS']['point_start'] = v['add_time']
 
@@ -75,21 +71,6 @@ def index():
         temperature_data['NAS']['CPU'].append(v['CPU'])
 
     print round((time.time() - start_time) * 1000, 3), 'ms when get data'
-
-
-
-    # for doc in Mongo.get().temperatrue.find().limit(48).sort('_id', -1):
-    # temperature_data['R7000']['cpu'].append(doc['R7000']['temperature']['cpu'] or None)
-    # temperature_data['R7000']['eth1'].append(doc['R7000']['temperature']['eth1'] or None)
-    # temperature_data['R7000']['eth2'].append(doc['R7000']['temperature']['eth2'] or None)
-    # temperature_data['RaspberryPi2']['cpu'].append(float(doc['RaspberryPi2']['temperature']['cpu']) or None)
-    # temperature_data['date'].append(time.strftime('%H:%M', time.localtime(int(doc['add_time']))) or '-')
-    #
-    # temperature_data['R7000']['cpu'] = temperature_data['R7000']['cpu'][::-1]
-    # temperature_data['R7000']['eth1'] = temperature_data['R7000']['eth1'][::-1]
-    # temperature_data['R7000']['eth2'] = temperature_data['R7000']['eth2'][::-1]
-    # temperature_data['RaspberryPi2']['cpu'] = temperature_data['RaspberryPi2']['cpu'][::-1]
-    # temperature_data['date'] = temperature_data['date'][::-1]
 
     return render_template('index.html', temperature_data=json.dumps(temperature_data))
 
@@ -103,11 +84,12 @@ def pi():
 
 @app.route('/route')
 def route():
-    with os.popen('ssh -i ~/.ssh/route.ssl admin@10.0.0.1 "cat /proc/dmu/temperature;wl -i eth1 phy_tempsense;wl -i eth2 phy_tempsense"') as f:
+    with os.popen(
+            'ssh -i ~/.ssh/route.ssl admin@10.0.0.1 "cat /proc/dmu/temperature;wl -i eth1 phy_tempsense;wl -i eth2 phy_tempsense"') as f:
         return make_response('<pre>' + f.read() + '</pre>')
 
-@app.route('/nas')
-def nas():
+
+def nas_sensor():
     data = {}
     with os.popen('sensors;free -m;w') as f:
         res = f.read()
@@ -161,25 +143,28 @@ def nas():
     # runtime
     with open('/proc/uptime', 'r') as f:
         data.setdefault('runtime', int(float(f.read().split(' ')[0])))
-    # print request
+        # print request
 
-    try:
-        return jsonify(data)
-    except:
-        return data
-
-        # return make_response('<pre>' + res + '</pre><br/>' + json.dumps(data))
+    return data
 
 
+@app.route('/nas')
+def nas():
+    return jsonify(nas_sensor())
+
+
+@app.route('/loop')
 def get_sensor_data_loop():
-    nas_data = nas()
+    nas_data = nas_sensor()
     if 'add_time' not in nas_data:
         nas_data['add_time'] = int(time.time())
 
     Mongo.get().sensor.insert(nas_data)
 
+    return make_response('success')
+
 
 # scheduler = Scheduler(POINT_INTERVAL, get_sensor_data_loop)
 # scheduler.start()
-app.run(host='0.0.0.0', debug=True, port=88)
+# app.run(host='0.0.0.0', debug=True, port=90)
 # scheduler.stop()
