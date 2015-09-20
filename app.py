@@ -1,5 +1,4 @@
 from flask import Flask, render_template, jsonify, make_response
-from threading import Timer
 import time
 import json
 import pymongo
@@ -8,30 +7,7 @@ import re
 import urllib2
 
 POINT_INTERVAL = 60 * 10
-
-
-class Scheduler(object):
-    def __init__(self, sleep_time, function):
-        self.sleep_time = sleep_time
-        self.function = function
-        self._t = None
-
-    def start(self):
-        if self._t is None:
-            self._t = Timer(self.sleep_time, self._run)
-            self._t.start()
-        else:
-            raise Exception("this timer is already running")
-
-    def _run(self):
-        self.function()
-        self._t = Timer(self.sleep_time, self._run)
-        self._t.start()
-
-    def stop(self):
-        if self._t is not None:
-            self._t.cancel()
-            self._t = None
+DAYS_RANGE = 30
 
 
 class Mongo:
@@ -50,38 +26,8 @@ class Mongo:
         return Mongo.instance.conn
 
 
-app = Flask(__name__)
-
-
-@app.route('/')
-def index():
-    global POINT_INTERVAL
-    temperature_data = {
-        'NAS': {
-            'point_start': None,
-            'point_interval': POINT_INTERVAL,
-        },
-    }
-    start_time = time.time()
-    for v in list(Mongo.get().nas.find().limit(4320)):
-        if not temperature_data['NAS']['point_start']:
-            temperature_data['NAS']['point_start'] = v['add_time']
-
-        temperature_data['NAS'].setdefault('CPU', [])
-        temperature_data['NAS']['CPU'].append(float(v['CPU']))
-
-    print round((time.time() - start_time) * 1000, 3), 'ms when get data'
-    print temperature_data
-    return render_template('index.html', temperature_data=json.dumps(temperature_data))
-
-
 def pi_sensor():
     return json.loads(urllib2.urlopen('http://10.0.0.10/sensor').read())
-
-
-@app.route('/pi')
-def pi():
-    return jsonify(pi_sensor())
 
 
 def route_sensor():
@@ -102,10 +48,6 @@ def route_sensor():
 
         return data
 
-
-@app.route('/route')
-def route():
-    return jsonify(route_sensor())
 
 
 def nas_sensor():
@@ -167,6 +109,72 @@ def nas_sensor():
     return data
 
 
+app = Flask(__name__)
+
+
+@app.route('/')
+def index():
+    global POINT_INTERVAL, DAYS_RANGE
+    temperature_data = {
+        'NAS': {
+            'point_start': None,
+            'point_interval': POINT_INTERVAL,
+        },
+        'route': {
+            'point_start': None,
+            'point_interval': POINT_INTERVAL,
+        },
+        'pi': {
+            'point_start': None,
+            'point_interval': POINT_INTERVAL,
+        },
+    }
+    start_time = time.time()
+    # NAS
+    for v in list(Mongo.get().nas.find({}, {'CPU': 1, 'add_time': 1}).limit(DAYS_RANGE * 86400 / POINT_INTERVAL)):
+        if not temperature_data['NAS']['point_start']:
+            temperature_data['NAS']['point_start'] = v['add_time']
+
+        temperature_data['NAS'].setdefault('CPU', [])
+        temperature_data['NAS']['CPU'].append(float(v['CPU']))
+
+    print round((time.time() - start_time) * 1000, 3), 'ms when get data'
+
+    start_time = time.time()
+    # route
+    for v in list(Mongo.get().route.find({}, {'CPU': 1, 'add_time': 1}).limit(DAYS_RANGE * 86400 / POINT_INTERVAL)):
+        if not temperature_data['route']['point_start']:
+            temperature_data['route']['point_start'] = v['add_time']
+
+        temperature_data['route'].setdefault('CPU', [])
+        temperature_data['route']['CPU'].append(float(v['CPU']))
+
+    print round((time.time() - start_time) * 1000, 3), 'ms when get data'
+
+    start_time = time.time()
+    # pi
+    for v in list(Mongo.get().pi.find({}, {'CPU': 1, 'add_time': 1}).limit(DAYS_RANGE * 86400 / POINT_INTERVAL)):
+        if not temperature_data['pi']['point_start']:
+            temperature_data['pi']['point_start'] = v['add_time']
+
+        temperature_data['pi'].setdefault('CPU', [])
+        temperature_data['pi']['CPU'].append(float(v['CPU']))
+
+    print round((time.time() - start_time) * 1000, 3), 'ms when get data'
+
+    return render_template('index.html', temperature_data=json.dumps(temperature_data))
+
+
+@app.route('/pi')
+def pi():
+    return jsonify(pi_sensor())
+
+
+@app.route('/route')
+def route():
+    return jsonify(route_sensor())
+
+
 @app.route('/nas')
 def nas():
     return jsonify(nas_sensor())
@@ -204,7 +212,4 @@ def get_sensor_data_loop():
     return make_response('success')
 
 
-# scheduler = Scheduler(POINT_INTERVAL, get_sensor_data_loop)
-# scheduler.start()
-app.run(host='0.0.0.0', debug=True, port=90)
-# scheduler.stop()
+# app.run(host='0.0.0.0', debug=True, port=90)
