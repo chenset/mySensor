@@ -49,7 +49,6 @@ def route_sensor():
         return data
 
 
-
 def nas_sensor():
     data = {}
     with os.popen('sensors;free -m;w') as f:
@@ -131,36 +130,55 @@ def index():
     }
     start_time = time.time()
     # NAS
-    for v in list(Mongo.get().nas.find({}, {'CPU': 1, 'add_time': 1}).limit(DAYS_RANGE * 86400 / POINT_INTERVAL)):
+    last_add_time = 0
+    for v in Mongo.get().nas.find({}, {'CPU': 1, 'add_time': 1}).limit(int(DAYS_RANGE * 86400 / POINT_INTERVAL)):
+        temperature_data['NAS'].setdefault('CPU', [])
+
         if not temperature_data['NAS']['point_start']:
             temperature_data['NAS']['point_start'] = v['add_time']
+            last_add_time = v['add_time']
+            temperature_data['NAS']['CPU'].append(float(v['CPU']))
 
-        temperature_data['NAS'].setdefault('CPU', [])
-        temperature_data['NAS']['CPU'].append(float(v['CPU']))
+        while last_add_time < v['add_time']:
+            if int((last_add_time + POINT_INTERVAL) / 100) == int(v['add_time'] / 100):
+                temperature_data['NAS']['CPU'].append(float(v['CPU']))
+            else:
+                temperature_data['NAS']['CPU'].append(0)
+            last_add_time += POINT_INTERVAL
 
     print round((time.time() - start_time) * 1000, 3), 'ms when get data'
 
     start_time = time.time()
     # route
-    for v in list(Mongo.get().route.find({}, {'CPU': 1, 'add_time': 1}).limit(DAYS_RANGE * 86400 / POINT_INTERVAL)):
+    last_add_time = 0
+    for v in Mongo.get().route.find({}, {'CPU': 1, 'add_time': 1}).limit(int(DAYS_RANGE * 86400 / POINT_INTERVAL)):
+        temperature_data['route'].setdefault('CPU', [])
+
         if not temperature_data['route']['point_start']:
             temperature_data['route']['point_start'] = v['add_time']
+            last_add_time = v['add_time']
+            temperature_data['route']['CPU'].append(float(v['CPU']))
 
-        temperature_data['route'].setdefault('CPU', [])
-        temperature_data['route']['CPU'].append(float(v['CPU']))
+        while last_add_time < v['add_time']:
+            if int((last_add_time + POINT_INTERVAL) / 100) == int(v['add_time'] / 100):
+                temperature_data['route']['CPU'].append(float(v['CPU']))
+            else:
+                temperature_data['route']['CPU'].append(0)
 
-    print round((time.time() - start_time) * 1000, 3), 'ms when get data'
-
-    start_time = time.time()
-    # pi
-    for v in list(Mongo.get().pi.find({}, {'CPU': 1, 'add_time': 1}).limit(DAYS_RANGE * 86400 / POINT_INTERVAL)):
-        if not temperature_data['pi']['point_start']:
-            temperature_data['pi']['point_start'] = v['add_time']
-
-        temperature_data['pi'].setdefault('CPU', [])
-        temperature_data['pi']['CPU'].append(float(v['CPU']))
+            last_add_time += POINT_INTERVAL
 
     print round((time.time() - start_time) * 1000, 3), 'ms when get data'
+    #
+    # start_time = time.time()
+    # # pi
+    # for v in list(Mongo.get().pi.find({}, {'CPU': 1, 'add_time': 1}).limit(DAYS_RANGE * 86400 / POINT_INTERVAL)):
+    #     if not temperature_data['pi']['point_start']:
+    #         temperature_data['pi']['point_start'] = v['add_time']
+    #
+    #     temperature_data['pi'].setdefault('CPU', [])
+    #     temperature_data['pi']['CPU'].append(float(v['CPU']))
+    #
+    # print round((time.time() - start_time) * 1000, 3), 'ms when get data'
 
     return render_template('index.html', temperature_data=json.dumps(temperature_data))
 
@@ -212,4 +230,4 @@ def get_sensor_data_loop():
     return make_response('success')
 
 
-# app.run(host='0.0.0.0', debug=True, port=90)
+app.run(host='0.0.0.0', debug=True, port=90)
