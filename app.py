@@ -223,4 +223,4 @@ def get_sensor_data_loop():
     return make_response('success')
 
 
-app.run(host='0.0.0.0', debug=True, port=90)
+# app.run(host='0.0.0.0', debug=True, port=90)
