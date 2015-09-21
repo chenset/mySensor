@@ -192,15 +192,6 @@ def get_sensor_data_loop():
         pass
 
     try:
-        pi_data = pi_sensor()
-        if 'add_time' not in pi_data:
-            pi_data['add_time'] = int(time.time())
-
-        Mongo.get().pi.insert(pi_data)
-    except:
-        pass
-
-    try:
         route_data = route_sensor()
         if 'add_time' not in route_data:
             route_data['add_time'] = int(time.time())
@@ -208,6 +199,15 @@ def get_sensor_data_loop():
         Mongo.get().route.insert(route_data)
     except:
         pass
+
+    # try:
+    #     pi_data = pi_sensor()
+    #     if 'add_time' not in pi_data:
+    #         pi_data['add_time'] = int(time.time())
+    #
+    #     Mongo.get().pi.insert(pi_data)
+    # except:
+    #     pass
 
     return make_response('success')
 
