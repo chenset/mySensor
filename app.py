@@ -140,10 +140,7 @@ def index():
             temperature_data['NAS']['CPU'].append(float(v['CPU']))
 
         while last_add_time < v['add_time']:
-            if int((last_add_time + POINT_INTERVAL) / 100) == int(v['add_time'] / 100):
-                temperature_data['NAS']['CPU'].append(float(v['CPU']))
-            else:
-                temperature_data['NAS']['CPU'].append(0)
+            temperature_data['NAS']['CPU'].append(float(v['CPU']))
             last_add_time += POINT_INTERVAL
 
     print round((time.time() - start_time) * 1000, 3), 'ms when get data'
@@ -160,11 +157,7 @@ def index():
             temperature_data['route']['CPU'].append(float(v['CPU']))
 
         while last_add_time < v['add_time']:
-            if int((last_add_time + POINT_INTERVAL) / 100) == int(v['add_time'] / 100):
-                temperature_data['route']['CPU'].append(float(v['CPU']))
-            else:
-                temperature_data['route']['CPU'].append(0)
-
+            temperature_data['route']['CPU'].append(float(v['CPU']))
             last_add_time += POINT_INTERVAL
 
     print round((time.time() - start_time) * 1000, 3), 'ms when get data'
