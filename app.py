@@ -131,7 +131,11 @@ def index():
     start_time = time.time()
     # NAS
     last_add_time = 0
-    for v in Mongo.get().nas.find({}, {'CPU': 1, 'add_time': 1}).limit(int(DAYS_RANGE * 86400 / POINT_INTERVAL)):
+    nas_res = Mongo.get().nas.find({}, {'CPU': 1, 'add_time': 1}).sort('_id', -1).limit(
+        int(DAYS_RANGE * 86400 / POINT_INTERVAL))
+    nas_res = list(nas_res)[::-1]
+    # print list(nas_res)
+    for v in nas_res:
         temperature_data['NAS'].setdefault('CPU', [])
 
         if not temperature_data['NAS']['point_start']:
@@ -148,7 +152,10 @@ def index():
     start_time = time.time()
     # route
     last_add_time = 0
-    for v in Mongo.get().route.find({}, {'CPU': 1, 'add_time': 1}).limit(int(DAYS_RANGE * 86400 / POINT_INTERVAL)):
+    route_res = Mongo.get().route.find({}, {'CPU': 1, 'add_time': 1}).sort('_id', -1).limit(
+        int(DAYS_RANGE * 86400 / POINT_INTERVAL))
+    route_res = list(route_res)[::-1]
+    for v in route_res:
         temperature_data['route'].setdefault('CPU', [])
 
         if not temperature_data['route']['point_start']:
