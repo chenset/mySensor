@@ -113,9 +113,9 @@ app = Flask(__name__)
 
 @app.route('/nas/temperatures')
 def nas_temperatures():
-    nas_res = Mongo.get().nas.find({}, {'CPU': 1, 'add_time': 1}).sort('_id', -1).limit(6)
+    nas_res = Mongo.get().nas.find({}, {'CPU': 1, 'add_time': 1,'_id':0}).sort('_id', -1).limit(6)
     nas_res = list(nas_res)[::-1]
-    return jsonify(nas_res)
+    return json.dumps(nas_res)
 
 @app.route('/')
 def index():
@@ -235,4 +235,4 @@ def get_sensor_data_loop():
 
     return make_response('success')
 
-# app.run(host='0.0.0.0', debug=True, port=90)
+#app.run(host='0.0.0.0', debug=True, port=922)
