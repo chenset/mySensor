@@ -117,6 +117,12 @@ def nas_temperatures():
     nas_res = list(nas_res)[::-1]
     return json.dumps(nas_res)
 
+@app.route('/route/temperatures')
+def route_temperatures():
+    res = Mongo.get().route.find({}, {'CPU': 1, 'add_time': 1,'_id':0}).sort('_id', -1).limit(6)
+    res = list(res)[::-1]
+    return json.dumps(res)
+
 @app.route('/')
 def index():
     global POINT_INTERVAL, DAYS_RANGE
@@ -235,4 +241,4 @@ def get_sensor_data_loop():
 
     return make_response('success')
 
-#app.run(host='0.0.0.0', debug=True, port=922)
+# app.run(host='0.0.0.0', debug=True, port=922)
