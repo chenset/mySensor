@@ -27,7 +27,7 @@ class Mongo:
 
 
 def pi_sensor():
-    return json.loads(urllib2.urlopen('http://10.0.0.10/sensor').read())
+    return json.loads(urllib2.urlopen('http://10.0.0.11/sensor').read())
 
 
 def route_sensor():
@@ -110,28 +110,32 @@ def nas_sensor():
 
 app = Flask(__name__)
 
+def get_temperatures(device):
+    res = Mongo.get()[device].find({}, {'CPU': 1, 'add_time': 1, '_id': 0}).sort('_id', -1).limit(6)
+    res = list(res)[::-1]
+    return json.dumps(res)
+
+
+@app.route('/pi/temperatures')
+def pi_temperatures():
+    return get_temperatures('pi')
+
 
 @app.route('/nas/temperatures')
 def nas_temperatures():
-    nas_res = Mongo.get().nas.find({}, {'CPU': 1, 'add_time': 1,'_id':0}).sort('_id', -1).limit(6)
-    nas_res = list(nas_res)[::-1]
-    return json.dumps(nas_res)
+    return get_temperatures('nas')
+
 
 @app.route('/route/temperatures')
 def route_temperatures():
-    res = Mongo.get().route.find({}, {'CPU': 1, 'add_time': 1,'_id':0}).sort('_id', -1).limit(6)
-    res = list(res)[::-1]
-    return json.dumps(res)
+    return get_temperatures('route')
+
 
 @app.route('/')
 def index():
     global POINT_INTERVAL, DAYS_RANGE
     temperature_data = {
-        'NAS': {
-            'point_start': None,
-            'point_interval': POINT_INTERVAL,
-        },
-        'route': {
+        'nas': {
             'point_start': None,
             'point_interval': POINT_INTERVAL,
         },
@@ -139,58 +143,35 @@ def index():
             'point_start': None,
             'point_interval': POINT_INTERVAL,
         },
+        'route': {
+            'point_start': None,
+            'point_interval': POINT_INTERVAL,
+        },
     }
-    start_time = time.time()
-    # NAS
-    last_add_time = 0
-    nas_res = Mongo.get().nas.find({}, {'CPU': 1, 'add_time': 1}).sort('_id', -1).limit(
+
+    def inner_loop(device):
+        start_time = time.time()
+        last_add_time = 0
+        device_res = Mongo.get()[device].find({}, {'CPU': 1, 'add_time': 1}).sort('_id', -1).limit(
             int(DAYS_RANGE * 86400 / POINT_INTERVAL))
-    nas_res = list(nas_res)[::-1]
-    # print list(nas_res)
-    for v in nas_res:
-        temperature_data['NAS'].setdefault('CPU', [])
+        device_res = list(device_res)[::-1]
+        for v in device_res:
+            temperature_data[device].setdefault('CPU', [])
 
-        if not temperature_data['NAS']['point_start']:
-            temperature_data['NAS']['point_start'] = v['add_time']
-            last_add_time = v['add_time']
-            temperature_data['NAS']['CPU'].append(float(v['CPU']))
+            if not temperature_data[device]['point_start']:
+                temperature_data[device]['point_start'] = v['add_time']
+                last_add_time = v['add_time']
+                temperature_data[device]['CPU'].append(float(v['CPU']))
 
-        while last_add_time < v['add_time']:
-            temperature_data['NAS']['CPU'].append(float(v['CPU']))
-            last_add_time += POINT_INTERVAL
+            while last_add_time < v['add_time']:
+                temperature_data[device]['CPU'].append(float(v['CPU']))
+                last_add_time += POINT_INTERVAL
 
-    print round((time.time() - start_time) * 1000, 3), 'ms when get data'
+        print round((time.time() - start_time) * 1000, 3), 'ms when get data'
 
-    start_time = time.time()
-    # route
-    last_add_time = 0
-    route_res = Mongo.get().route.find({}, {'CPU': 1, 'add_time': 1}).sort('_id', -1).limit(
-            int(DAYS_RANGE * 86400 / POINT_INTERVAL))
-    route_res = list(route_res)[::-1]
-    for v in route_res:
-        temperature_data['route'].setdefault('CPU', [])
-
-        if not temperature_data['route']['point_start']:
-            temperature_data['route']['point_start'] = v['add_time']
-            last_add_time = v['add_time']
-            temperature_data['route']['CPU'].append(float(v['CPU']))
-
-        while last_add_time < v['add_time']:
-            temperature_data['route']['CPU'].append(float(v['CPU']))
-            last_add_time += POINT_INTERVAL
-
-    print round((time.time() - start_time) * 1000, 3), 'ms when get data'
-    #
-    # start_time = time.time()
-    # # pi
-    # for v in list(Mongo.get().pi.find({}, {'CPU': 1, 'add_time': 1}).limit(DAYS_RANGE * 86400 / POINT_INTERVAL)):
-    #     if not temperature_data['pi']['point_start']:
-    #         temperature_data['pi']['point_start'] = v['add_time']
-    #
-    #     temperature_data['pi'].setdefault('CPU', [])
-    #     temperature_data['pi']['CPU'].append(float(v['CPU']))
-    #
-    # print round((time.time() - start_time) * 1000, 3), 'ms when get data'
+    inner_loop('nas')
+    inner_loop('pi')
+    inner_loop('route')
 
     return render_template('index.html', temperature_data=json.dumps(temperature_data))
 
@@ -212,32 +193,20 @@ def nas():
 
 @app.route('/loop')
 def get_sensor_data_loop():
-    try:
-        nas_data = nas_sensor()
-        if 'add_time' not in nas_data:
-            nas_data['add_time'] = int(time.time())
 
-        Mongo.get().nas.insert(nas_data)
-    except:
-        pass
+    def inner_loop(device, sensor_fun):
+        try:
+            data = sensor_fun()
+            if 'add_time' not in data:
+                data['add_time'] = int(time.time())
 
-    try:
-        route_data = route_sensor()
-        if 'add_time' not in route_data:
-            route_data['add_time'] = int(time.time())
+            Mongo.get()[device].insert(data)
+        except:
+            pass
 
-        Mongo.get().route.insert(route_data)
-    except:
-        pass
-
-    # try:
-    #     pi_data = pi_sensor()
-    #     if 'add_time' not in pi_data:
-    #         pi_data['add_time'] = int(time.time())
-    #
-    #     Mongo.get().pi.insert(pi_data)
-    # except:
-    #     pass
+    inner_loop('nas', nas_sensor)
+    inner_loop('route', route_sensor)
+    inner_loop('pi', pi_sensor)
 
     return make_response('success')
 
