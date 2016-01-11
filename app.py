@@ -26,6 +26,10 @@ class Mongo:
         return Mongo.instance.conn
 
 
+def room_sensor():
+    return json.loads(urllib2.urlopen('http://10.0.0.11/room').read())
+
+
 def pi_sensor():
     return json.loads(urllib2.urlopen('http://10.0.0.11/sensor').read())
 
@@ -110,6 +114,7 @@ def nas_sensor():
 
 app = Flask(__name__)
 
+
 def get_temperatures(device):
     res = Mongo.get()[device].find({}, {'CPU': 1, 'add_time': 1, '_id': 0}).sort('_id', -1).limit(6)
     res = list(res)[::-1]
@@ -130,50 +135,78 @@ def nas_temperatures():
 def route_temperatures():
     return get_temperatures('route')
 
-
 @app.route('/')
 def index():
+    return render_template('index.html')
+
+@app.route('/sensor.json')
+def sensor_json():
     global POINT_INTERVAL, DAYS_RANGE
     temperature_data = {
+        'temperature': {
+            'point_start': None,
+            'point_interval': POINT_INTERVAL,
+            'index': 'temperature',
+            'color':'#FF9933',
+        },
+        'humidity': {
+            'point_start': None,
+            'point_interval': POINT_INTERVAL,
+            'index': 'humidity',
+            'color':'#0099ff',
+        },
         'nas': {
             'point_start': None,
             'point_interval': POINT_INTERVAL,
+            'index': 'CPU',
+            'color':'#FF9933',
         },
         'pi': {
             'point_start': None,
             'point_interval': POINT_INTERVAL,
+            'index': 'CPU',
+            'color':'#FF9933',
         },
         'route': {
             'point_start': None,
             'point_interval': POINT_INTERVAL,
+            'index': 'CPU',
+            'color':'#FF9933',
         },
     }
 
-    def inner_loop(device):
+    def inner_loop(doc, device, data_key='CPU'):
         start_time = time.time()
         last_add_time = 0
-        device_res = Mongo.get()[device].find({}, {'CPU': 1, 'add_time': 1}).sort('_id', -1).limit(
-            int(DAYS_RANGE * 86400 / POINT_INTERVAL))
+        device_res = Mongo.get()[doc].find({}, {data_key: 1, 'add_time': 1}).sort('_id', -1).limit(
+                int(DAYS_RANGE * 86400 / POINT_INTERVAL))
         device_res = list(device_res)[::-1]
         for v in device_res:
-            temperature_data[device].setdefault('CPU', [])
+            temperature_data[device].setdefault(data_key, [])
 
             if not temperature_data[device]['point_start']:
                 temperature_data[device]['point_start'] = v['add_time']
                 last_add_time = v['add_time']
-                temperature_data[device]['CPU'].append(float(v['CPU']))
+                temperature_data[device][data_key].append(float(v[data_key]))
 
             while last_add_time < v['add_time']:
-                temperature_data[device]['CPU'].append(float(v['CPU']))
+                temperature_data[device][data_key].append(float(v[data_key]))
                 last_add_time += POINT_INTERVAL
 
         print round((time.time() - start_time) * 1000, 3), 'ms when get data'
 
-    inner_loop('nas')
-    inner_loop('pi')
-    inner_loop('route')
+    inner_loop('room', 'temperature', 'temperature')
+    inner_loop('room', 'humidity', 'humidity')
+    inner_loop('nas', 'nas')
+    inner_loop('pi', 'pi')
+    inner_loop('route', 'route')
 
-    return render_template('index.html', temperature_data=json.dumps(temperature_data))
+    return jsonify(temperature_data)
+
+
+@app.route('/room')
+def room():
+    return jsonify(room_sensor())
 
 
 @app.route('/pi')
@@ -193,7 +226,6 @@ def nas():
 
 @app.route('/loop')
 def get_sensor_data_loop():
-
     def inner_loop(device, sensor_fun):
         try:
             data = sensor_fun()
@@ -207,7 +239,9 @@ def get_sensor_data_loop():
     inner_loop('nas', nas_sensor)
     inner_loop('route', route_sensor)
     inner_loop('pi', pi_sensor)
+    inner_loop('room', room_sensor)
 
     return make_response('success')
 
-# app.run(host='0.0.0.0', debug=True, port=922)
+
+app.run(host='0.0.0.0', debug=True, port=92)

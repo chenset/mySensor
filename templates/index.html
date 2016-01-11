@@ -41,106 +41,126 @@
 <script src="{{ url_for('static',filename='js/highcharts.js') }}"></script>
 <script>
 
-    var chart_data = {{temperature_data | safe}}
-            $(function () {
-                $.ajax({
-                    method: 'GET',
-                    url: '/nas',
-                    cache: false,
-                    success: function (data) {
-                        var html = '', i;
-                        for (i in data) {
-                            if (!data.hasOwnProperty(i)) {
-                                continue;
-                            }
-                            html += ' <li class="box"><h4>' + i + '</h4><div class="value nas-cpu">' + data[i] + '</div></li>';
-                        }
+    Highcharts.setOptions({
+        global: {
+            useUTC: false //close UTC
+        }
+    });
 
-                        $('.box-wrap').append(html);
-                    }
-                });
-
-                Highcharts.setOptions({
-                    global: {
-                        useUTC: false //close UTC
-                    }
-                });
-
-                //Loop for each chart
-                for (var k in chart_data) {
-                    if (!chart_data.hasOwnProperty(k)) {
-                        continue;
-                    }
-
-                    var div = document.createElement("div");
-                    div.id = 'container-' + k.toLowerCase();
-                    div.style.minWidth = "400px";
-                    div.style.height = "240px";
-                    document.getElementById('containers-wrap').appendChild(div);
-
-                    $('#container-' + k.toLowerCase()).highcharts({
-                        chart: {
-                            zoomType: 'x'
-                        },
-                        title: {
-                            text: k.toUpperCase()
-                        },
-                        subtitle: {
-                            text: document.ontouchstart === undefined ?
-                                    'Click and drag in the plot area to zoom in' :
-                                    'Pinch the chart to zoom in'
-                        },
-                        xAxis: {
-                            type: 'datetime',
-                            maxZoom: 3600000,  //One hour
-                            title: {
-                                text: null
-                            }
-                        },
-                        yAxis: {
-                            title: {
-                                text: 'Temperature'
-                            }
-                        },
-                        tooltip: {
-                            shared: true
-                        },
-                        legend: {
-                            enabled: false
-                        },
-                        plotOptions: {
-                            area: {
-                                fillColor: {
-                                    linearGradient: {x1: 0, y1: 0, x2: 0, y2: 1},
-                                    stops: [
-                                        [0, Highcharts.getOptions().colors[0]],
-                                        [1, Highcharts.Color(Highcharts.getOptions().colors[0]).setOpacity(0).get('rgba')]
-                                    ]
-                                },
-                                lineWidth: 1,
-                                marker: {
-                                    enabled: false
-                                },
-                                shadow: false,
-                                states: {
-                                    hover: {
-                                        lineWidth: 1
-                                    }
-                                },
-                                threshold: null
-                            }
-                        },
-
-                        series: [{
-                            type: 'area',
-                            name: 'CPU',
-                            pointInterval: parseInt(chart_data[k]['point_interval'] + '000', 10),
-                            pointStart: parseInt(chart_data[k]['point_start'] + '000', 10),
-                            data: chart_data[k]['CPU']
-                        }]
-                    });
+    $.ajax({
+        method: 'GET',
+        url: '/nas',
+        cache: false,
+        success: function (data) {
+            var html = '', i;
+            for (i in data) {
+                if (!data.hasOwnProperty(i)) {
+                    continue;
                 }
-            });
+                html += ' <li class="box"><h4>' + i + '</h4><div class="value nas-cpu">' + data[i] + '</div></li>';
+            }
+
+            $('.box-wrap').append(html);
+        }
+    });
+
+    $.ajax({
+        method: 'GET',
+        url: '/sensor.json',
+        cache: false,
+        success: function (chart_data) {
+
+            //Loop for each chart
+            for (var k in chart_data) {
+                if (!chart_data.hasOwnProperty(k)) {
+                    continue;
+                }
+                Highcharts.setOptions({
+                    colors: [
+                        Highcharts.Color(chart_data[k]['color']).setOpacity(0.8).get('rgba')
+                    ]
+                });
+                generateChart(chart_data, k);
+            }
+        }
+    });
+
+
+    function generateChart(chart_data, k) {
+        var div = document.createElement("div");
+        div.id = 'container-' + k.toLowerCase();
+        div.style.minWidth = "400px";
+        div.style.height = "240px";
+        document.getElementById('containers-wrap').appendChild(div);
+
+        $('#container-' + k.toLowerCase()).highcharts({
+            chart: {
+                zoomType: 'x'
+            },
+            title: {
+                text: k.toUpperCase()
+            },
+            subtitle: {
+                text: document.ontouchstart === undefined ?
+                        'Click and drag in the plot area to zoom in' :
+                        'Pinch the chart to zoom in'
+            },
+            xAxis: {
+                type: 'datetime',
+                maxZoom: 3600000,  //One hour
+                title: {
+                    text: null
+                }
+            },
+            yAxis: {
+                title: {
+                    text: k.toLowerCase() === 'humidity' ? 'humidity' : 'Temperature'
+                },
+                labels: {
+                    style: {
+                        color: '#6e6e70'
+                    }
+                }
+            },
+            tooltip: {
+                shared: true
+            },
+            legend: {
+                enabled: false
+            },
+            plotOptions: {
+                area: {
+                    fillColor: {
+                        linearGradient: {x1: 0, y1: 0, x2: 0, y2: 1},
+                        stops: [
+                            [0, chart_data[k]['color']],
+                            [1, Highcharts.Color(chart_data[k]['color']).setOpacity(0).get('rgba')]
+                        ]
+                    },
+                    lineWidth: 1,
+                    marker: {
+                        enabled: false
+                    },
+                    shadow: false,
+                    states: {
+                        hover: {
+                            lineWidth: 1
+                        }
+                    },
+                    threshold: null
+                }
+            },
+
+            series: [{
+                type: 'area',
+                name: chart_data[k]['index'],
+                pointInterval: parseInt(chart_data[k]['point_interval'] + '000', 10),
+                pointStart: parseInt(chart_data[k]['point_start'] + '000', 10),
+                data: chart_data[k][chart_data[k]['index']]
+            }]
+        });
+
+    }
 </script>
 </body>
 </html>
