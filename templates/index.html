@@ -68,37 +68,39 @@
         method: 'GET',
         url: '/sensor.json',
         cache: false,
-        success: function (chart_data) {
+        success: function (data) {
+            var chartData = data.data;
 
             //Loop for each chart
-            for (var k in chart_data) {
-                if (!chart_data.hasOwnProperty(k)) {
+            for (var k in chartData) {
+                if (!chartData.hasOwnProperty(k)) {
                     continue;
                 }
+               console.log(chartData[k]);
                 Highcharts.setOptions({
                     colors: [
-                        Highcharts.Color(chart_data[k]['color']).setOpacity(0.8).get('rgba')
+                        Highcharts.Color(chartData[k]['color']).setOpacity(0.8).get('rgba')
                     ]
                 });
-                generateChart(chart_data, k);
+                generateChart(chartData, k);
             }
         }
     });
 
 
-    function generateChart(chart_data, k) {
+    function generateChart(chartData, k) {
         var div = document.createElement("div");
-        div.id = 'container-' + k.toLowerCase();
+        div.id = 'container-' + chartData[k]['name'].toLowerCase();
         div.style.minWidth = "400px";
         div.style.height = "240px";
         document.getElementById('containers-wrap').appendChild(div);
 
-        $('#container-' + k.toLowerCase()).highcharts({
+        $('#container-' + chartData[k]['name'].toLowerCase()).highcharts({
             chart: {
                 zoomType: 'x'
             },
             title: {
-                text: k.toUpperCase()
+                text: chartData[k]['name'].toUpperCase()
             },
             subtitle: {
                 text: document.ontouchstart === undefined ?
@@ -114,7 +116,7 @@
             },
             yAxis: {
                 title: {
-                    text: k.toLowerCase() === 'humidity' ? 'humidity' : 'Temperature'
+                    text: chartData[k]['name'].toLowerCase() === 'humidity' ? 'humidity' : 'Temperature'
                 },
                 labels: {
                     style: {
@@ -133,8 +135,8 @@
                     fillColor: {
                         linearGradient: {x1: 0, y1: 0, x2: 0, y2: 1},
                         stops: [
-                            [0, chart_data[k]['color']],
-                            [1, Highcharts.Color(chart_data[k]['color']).setOpacity(0).get('rgba')]
+                            [0, chartData[k]['color']],
+                            [1, Highcharts.Color(chartData[k]['color']).setOpacity(0).get('rgba')]
                         ]
                     },
                     lineWidth: 1,
@@ -153,10 +155,10 @@
 
             series: [{
                 type: 'area',
-                name: chart_data[k]['index'],
-                pointInterval: parseInt(chart_data[k]['point_interval'] + '000', 10),
-                pointStart: parseInt(chart_data[k]['point_start'] + '000', 10),
-                data: chart_data[k][chart_data[k]['index']]
+                name: chartData[k]['index'],
+                pointInterval: parseInt(chartData[k]['point_interval'] + '000', 10),
+                pointStart: parseInt(chartData[k]['point_start'] + '000', 10),
+                data: chartData[k][chartData[k]['index']]
             }]
         });
 

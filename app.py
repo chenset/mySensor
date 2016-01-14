@@ -5,6 +5,7 @@ import pymongo
 import os
 import re
 import urllib2
+from operator import itemgetter
 
 POINT_INTERVAL = 60 * 10
 DAYS_RANGE = 30
@@ -135,43 +136,55 @@ def nas_temperatures():
 def route_temperatures():
     return get_temperatures('route')
 
+
 @app.route('/')
 def index():
     return render_template('index.html')
+
 
 @app.route('/sensor.json')
 def sensor_json():
     global POINT_INTERVAL, DAYS_RANGE
     temperature_data = {
         'temperature': {
+            'name': 'temperature',
             'point_start': None,
             'point_interval': POINT_INTERVAL,
             'index': 'temperature',
-            'color':'#FF9933',
+            'color': '#FF9933',
+            'order': 1000,
         },
         'humidity': {
+            'name': 'humidity',
             'point_start': None,
             'point_interval': POINT_INTERVAL,
             'index': 'humidity',
-            'color':'#0099ff',
+            'color': '#0099ff',
+            'order': 2000,
         },
         'nas': {
+            'name': 'nas',
             'point_start': None,
             'point_interval': POINT_INTERVAL,
             'index': 'CPU',
-            'color':'#FF9933',
+            'color': '#FF9933',
+            'order': 3000,
         },
         'pi': {
+            'name': 'pi',
             'point_start': None,
             'point_interval': POINT_INTERVAL,
             'index': 'CPU',
-            'color':'#FF9933',
+            'color': '#FF9933',
+            'order': 4000,
         },
         'route': {
+            'name': 'route',
             'point_start': None,
             'point_interval': POINT_INTERVAL,
             'index': 'CPU',
-            'color':'#FF9933',
+            'color': '#FF9933',
+            'order': 4000,
         },
     }
 
@@ -201,7 +214,8 @@ def sensor_json():
     inner_loop('pi', 'pi')
     inner_loop('route', 'route')
 
-    return jsonify(temperature_data)
+    sorted_data = sorted([v for k, v in temperature_data.items()], key=itemgetter('order'))  # Sorted by order
+    return jsonify(data=sorted_data)
 
 
 @app.route('/room')
@@ -244,4 +258,4 @@ def get_sensor_data_loop():
     return make_response('success')
 
 
-# app.run(host='0.0.0.0', debug=True, port=92)
+app.run(host='0.0.0.0', debug=True, port=92)
