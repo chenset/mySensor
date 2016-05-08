@@ -8,7 +8,7 @@ import urllib2
 from operator import itemgetter
 
 POINT_INTERVAL = 60 * 10
-DAYS_RANGE = 30
+DAYS_RANGE = 7
 
 
 class Mongo:
