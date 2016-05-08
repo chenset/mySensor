@@ -37,7 +37,7 @@ def pi_sensor():
 
 def route_sensor():
     with os.popen(
-            'ssh -i ~/.ssh/route.ssl admin@10.0.0.1 "cat /proc/dmu/temperature;echo \'eth1 :\';wl -i eth1 phy_tempsense 2>/dev/null;echo \'eth2 :\';wl -i eth2 phy_tempsense 2>/dev/null"') as f:
+            'ssh -i ~/.ssh/route.600.key admin@10.0.0.1 "cat /proc/dmu/temperature;echo \'eth1 :\';wl -i eth1 phy_tempsense 2>/dev/null;echo \'eth2 :\';wl -i eth2 phy_tempsense 2>/dev/null"') as f:
         res = f.read()
 
         route_pattern = r'CPU\s{1}temperature\s{1}:\s{1}(\d+\.?\d*)[^e]*(eth1)[^\d]*(\d*)[^\n]*\n{1}(eth2)[^\d]*(\d*)'
@@ -70,10 +70,10 @@ def nas_sensor():
             index += 1
 
         # SYS
-        sys_pattern = r'(SYSTIN|CPUTIN|AUXTIN):\s+\+(\d+\.?\d*)'
-        sys_re = re.compile(sys_pattern)
-        for (k, v) in sys_re.findall(res):
-            data.setdefault(k, float(v))
+        # sys_pattern = r'(SYSTIN|CPUTIN|AUXTIN):\s+\+(\d+\.?\d*)'
+        # sys_re = re.compile(sys_pattern)
+        # for (k, v) in sys_re.findall(res):
+        #     data.setdefault(k, float(v))
         #
         # # HDD
         # hdd_pattern = r'(/dev/sd\w{1}):[^:]+:\s+(\d+\.?\d*)'
@@ -82,32 +82,32 @@ def nas_sensor():
         #     data.setdefault(k, float(v))
 
         # RAM
-        ram_pattern = r'Mem:\s+(\d+)\s+(\d+)\s+(\d+)[\s\S]+buffers/cache:\s+(\d+)\s+(\d+)'
-        ram_re = re.compile(ram_pattern)
-        ram_res = list(ram_re.findall(res)[0])
-        data.setdefault('RAM real free', int(ram_res.pop()))
-        data.setdefault('RAM real used', int(ram_res.pop()))
-        data.setdefault('RAM free', int(ram_res.pop()))
-        data.setdefault('RAM used', int(ram_res.pop()))
-        data.setdefault('RAM total', int(ram_res.pop()))
+        # ram_pattern = r'Mem:\s+(\d+)\s+(\d+)\s+(\d+)[\s\S]+buffers/cache:\s+(\d+)\s+(\d+)'
+        # ram_re = re.compile(ram_pattern)
+        # ram_res = list(ram_re.findall(res)[0])
+        # data.setdefault('RAM real free', int(ram_res.pop()))
+        # data.setdefault('RAM real used', int(ram_res.pop()))
+        # data.setdefault('RAM free', int(ram_res.pop()))
+        # data.setdefault('RAM used', int(ram_res.pop()))
+        # data.setdefault('RAM total', int(ram_res.pop()))
 
         # load
-        load_pattern = r'load\s{1}average:\s{1}(\d+\.?\d*),\s{1}(\d+\.?\d*),\s{1}(\d+\.?\d*)'
-        load_re = re.compile(load_pattern)
-        load_res = list(load_re.findall(res)[0])
-        data.setdefault('Load 15 min', float(load_res.pop()))
-        data.setdefault('Load 5 min', float(load_res.pop()))
-        data.setdefault('Load 1 min', float(load_res.pop()))
+        # load_pattern = r'load\s{1}average:\s{1}(\d+\.?\d*),\s{1}(\d+\.?\d*),\s{1}(\d+\.?\d*)'
+        # load_re = re.compile(load_pattern)
+        # load_res = list(load_re.findall(res)[0])
+        # data.setdefault('Load 15 min', float(load_res.pop()))
+        # data.setdefault('Load 5 min', float(load_res.pop()))
+        # data.setdefault('Load 1 min', float(load_res.pop()))
 
         # users
-        other_pattern = r'\s+(\d+)\s{1}users,'
-        other_re = re.compile(other_pattern)
-        for i in other_re.findall(res):
-            data.setdefault('users', int(i))
+        # other_pattern = r'\s+(\d+)\s{1}users,'
+        # other_re = re.compile(other_pattern)
+        # for i in other_re.findall(res):
+        #     data.setdefault('users', int(i))
 
     # runtime
-    with open('/proc/uptime', 'r') as f:
-        data.setdefault('runtime', int(float(f.read().split(' ')[0])))
+    # with open('/proc/uptime', 'r') as f:
+    #     data.setdefault('runtime', int(float(f.read().split(' ')[0])))
         # print request
 
     return data
