@@ -4,7 +4,9 @@ import json
 import pymongo
 import os
 import re
-import urllib2
+import traceback
+import requests
+import subprocess
 from operator import itemgetter
 
 POINT_INTERVAL = 60 * 10
@@ -28,17 +30,18 @@ class Mongo:
 
 
 def room_sensor():
-    return json.loads(urllib2.urlopen('http://10.0.0.11/room').read())
+    return json.loads(requests.get('http://10.0.0.11/room').text)
 
 
 def pi_sensor():
-    return json.loads(urllib2.urlopen('http://10.0.0.11/sensor').read())
+    return json.loads(requests.get('http://10.0.0.11/sensor').text)
 
 
 def route_sensor():
-    with os.popen(
-            'ssh -i ~/.ssh/route.600.key admin@10.0.0.1 "cat /proc/dmu/temperature;echo \'eth1 :\';wl -i eth1 phy_tempsense 2>/dev/null;echo \'eth2 :\';wl -i eth2 phy_tempsense 2>/dev/null"') as f:
-        res = f.read()
+    with subprocess.Popen(
+            'ssh -i ~/.ssh/route.600.key admin@10.0.0.1 "cat /proc/dmu/temperature;echo \'eth1 :\';wl -i eth1 phy_tempsense 2>/dev/null;echo \'eth2 :\';wl -i eth2 phy_tempsense 2>/dev/null"',
+            shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT) as f:
+        res = str(f.stdout.read(), 'gbk')
 
         route_pattern = r'CPU\s{1}temperature\s{1}:\s{1}(\d+\.?\d*)[^e]*(eth1)[^\d]*(\d*)[^\n]*\n{1}(eth2)[^\d]*(\d*)'
         route_re = re.compile(route_pattern)
@@ -206,7 +209,7 @@ def sensor_json():
                 temperature_data[device][data_key].append(float(v[data_key]))
                 last_add_time += POINT_INTERVAL
 
-        print round((time.time() - start_time) * 1000, 3), 'ms when get data'
+        print(round((time.time() - start_time) * 1000, 3), 'ms when get data')
 
     inner_loop('room', 'temperature', 'temperature')
     inner_loop('room', 'humidity', 'humidity')
@@ -248,6 +251,7 @@ def get_sensor_data_loop():
 
             Mongo.get()[device].insert(data)
         except:
+            traceback.print_exc()
             pass
 
     inner_loop('nas', nas_sensor)
