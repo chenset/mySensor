@@ -223,6 +223,9 @@ def sensor_json():
                 temperature_data[device][data_key].append(float(v[data_key]))
                 last_add_time += POINT_INTERVAL
 
+        if data_key not in temperature_data[device]:  # Delete when no data
+            del temperature_data[device]
+
         print(round((time.time() - start_time) * 1000, 3), 'ms when get data')
 
     inner_loop('dht_one', 'temperature_one', 'temperature')
