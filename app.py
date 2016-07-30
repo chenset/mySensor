@@ -132,7 +132,7 @@ def sensor_json():
     global POINT_INTERVAL, DAYS_RANGE
     temperature_data = {
         'temperature_one': {
-            'name': 'temperature',
+            'name': 'temperature_one',
             'point_start': None,
             'point_interval': POINT_INTERVAL,
             'index': 'temperature_one',
@@ -140,7 +140,7 @@ def sensor_json():
             'order': 1000,
         },
         'humidity_one': {
-            'name': 'humidity',
+            'name': 'humidity_one',
             'point_start': None,
             'point_interval': POINT_INTERVAL,
             'index': 'humidity_one',
@@ -172,7 +172,7 @@ def sensor_json():
             'order': 5000,
         },
         'temperature_two': {
-            'name': 'temperature',
+            'name': 'temperature_two',
             'point_start': None,
             'point_interval': POINT_INTERVAL,
             'index': 'temperature_two',
@@ -180,7 +180,7 @@ def sensor_json():
             'order': 6000,
         },
         'humidity_two': {
-            'name': 'humidity',
+            'name': 'humidity_two',
             'point_start': None,
             'point_interval': POINT_INTERVAL,
             'index': 'humidity_two',
@@ -188,7 +188,7 @@ def sensor_json():
             'order': 7000,
         },
         'temperature_three': {
-            'name': 'temperature',
+            'name': 'temperature_three',
             'point_start': None,
             'point_interval': POINT_INTERVAL,
             'index': 'temperature_three',
@@ -196,7 +196,7 @@ def sensor_json():
             'order': 8000,
         },
         'humidity_three': {
-            'name': 'humidity',
+            'name': 'humidity_three',
             'point_start': None,
             'point_interval': POINT_INTERVAL,
             'index': 'humidity_three',
