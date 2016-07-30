@@ -1,4 +1,4 @@
-from flask import Flask, render_template, jsonify, make_response
+from flask import Flask, render_template, jsonify, make_response, request
 import time
 import json
 import pymongo
@@ -72,48 +72,30 @@ def nas_sensor():
             data.setdefault('Core' + str(index), float(i))
             index += 1
 
-        # SYS
-        # sys_pattern = r'(SYSTIN|CPUTIN|AUXTIN):\s+\+(\d+\.?\d*)'
-        # sys_re = re.compile(sys_pattern)
-        # for (k, v) in sys_re.findall(res):
-        #     data.setdefault(k, float(v))
-        #
-        # # HDD
-        # hdd_pattern = r'(/dev/sd\w{1}):[^:]+:\s+(\d+\.?\d*)'
-        # hdd_re = re.compile(hdd_pattern)
-        # for (k, v) in hdd_re.findall(res):
-        #     data.setdefault(k, float(v))
-
-        # RAM
-        # ram_pattern = r'Mem:\s+(\d+)\s+(\d+)\s+(\d+)[\s\S]+buffers/cache:\s+(\d+)\s+(\d+)'
-        # ram_re = re.compile(ram_pattern)
-        # ram_res = list(ram_re.findall(res)[0])
-        # data.setdefault('RAM real free', int(ram_res.pop()))
-        # data.setdefault('RAM real used', int(ram_res.pop()))
-        # data.setdefault('RAM free', int(ram_res.pop()))
-        # data.setdefault('RAM used', int(ram_res.pop()))
-        # data.setdefault('RAM total', int(ram_res.pop()))
-
-        # load
-        # load_pattern = r'load\s{1}average:\s{1}(\d+\.?\d*),\s{1}(\d+\.?\d*),\s{1}(\d+\.?\d*)'
-        # load_re = re.compile(load_pattern)
-        # load_res = list(load_re.findall(res)[0])
-        # data.setdefault('Load 15 min', float(load_res.pop()))
-        # data.setdefault('Load 5 min', float(load_res.pop()))
-        # data.setdefault('Load 1 min', float(load_res.pop()))
-
-        # users
-        # other_pattern = r'\s+(\d+)\s{1}users,'
-        # other_re = re.compile(other_pattern)
-        # for i in other_re.findall(res):
-        #     data.setdefault('users', int(i))
-
-    # runtime
-    # with open('/proc/uptime', 'r') as f:
-    #     data.setdefault('runtime', int(float(f.read().split(' ')[0])))
-        # print request
-
     return data
+
+
+def dht_one_sensor():
+    return dht_sensor('one')
+
+
+def dht_two_sensor():
+    return dht_sensor('two')
+
+
+def dht_three_sensor():
+    return dht_sensor('three')
+
+
+def dht_sensor(chip):
+    res = '{}'
+    try:
+        with open('/dev/shm/sensor.' + chip + '.log', 'r') as f:
+            res = f.read()
+    except:
+        pass
+
+    return json.loads(res)
 
 
 app = Flask(__name__)
@@ -149,19 +131,19 @@ def index():
 def sensor_json():
     global POINT_INTERVAL, DAYS_RANGE
     temperature_data = {
-        'temperature': {
+        'temperature_one': {
             'name': 'temperature',
             'point_start': None,
             'point_interval': POINT_INTERVAL,
-            'index': 'temperature',
+            'index': 'temperature_one',
             'color': '#FF9933',
             'order': 1000,
         },
-        'humidity': {
+        'humidity_one': {
             'name': 'humidity',
             'point_start': None,
             'point_interval': POINT_INTERVAL,
-            'index': 'humidity',
+            'index': 'humidity_one',
             'color': '#0099ff',
             'order': 2000,
         },
@@ -187,7 +169,39 @@ def sensor_json():
             'point_interval': POINT_INTERVAL,
             'index': 'CPU',
             'color': '#FF9933',
-            'order': 4000,
+            'order': 5000,
+        },
+        'temperature_two': {
+            'name': 'temperature',
+            'point_start': None,
+            'point_interval': POINT_INTERVAL,
+            'index': 'temperature_two',
+            'color': '#FF9933',
+            'order': 6000,
+        },
+        'humidity_two': {
+            'name': 'humidity',
+            'point_start': None,
+            'point_interval': POINT_INTERVAL,
+            'index': 'humidity_two',
+            'color': '#0099ff',
+            'order': 7000,
+        },
+        'temperature_three': {
+            'name': 'temperature',
+            'point_start': None,
+            'point_interval': POINT_INTERVAL,
+            'index': 'temperature_three',
+            'color': '#FF9933',
+            'order': 8000,
+        },
+        'humidity_three': {
+            'name': 'humidity',
+            'point_start': None,
+            'point_interval': POINT_INTERVAL,
+            'index': 'humidity_three',
+            'color': '#0099ff',
+            'order': 2000,
         },
     }
 
@@ -195,7 +209,7 @@ def sensor_json():
         start_time = time.time()
         last_add_time = 0
         device_res = Mongo.get()[doc].find({}, {data_key: 1, 'add_time': 1}).sort('_id', -1).limit(
-                int(DAYS_RANGE * 86400 / POINT_INTERVAL))
+            int(DAYS_RANGE * 86400 / POINT_INTERVAL))
         device_res = list(device_res)[::-1]
         for v in device_res:
             temperature_data[device].setdefault(data_key, [])
@@ -211,11 +225,15 @@ def sensor_json():
 
         print(round((time.time() - start_time) * 1000, 3), 'ms when get data')
 
-    inner_loop('room', 'temperature', 'temperature')
-    inner_loop('room', 'humidity', 'humidity')
+    inner_loop('dht_one', 'temperature_one', 'temperature')
+    inner_loop('dht_one', 'humidity_one', 'humidity')
     inner_loop('nas', 'nas')
     inner_loop('pi', 'pi')
     inner_loop('route', 'route')
+    inner_loop('dht_two', 'temperature_two', 'temperature')
+    inner_loop('dht_two', 'humidity_two', 'humidity')
+    inner_loop('dht_three', 'temperature_three', 'temperature')
+    inner_loop('dht_three', 'humidity_three', 'humidity')
 
     sorted_data = sorted([v for k, v in temperature_data.items()], key=itemgetter('order'))  # Sorted by order
     return jsonify(data=sorted_data)
@@ -241,11 +259,43 @@ def nas():
     return jsonify(nas_sensor())
 
 
+@app.route('/dht/one')
+def dht_one():
+    return jsonify(dht_sensor('one'))
+
+
+@app.route('/dht/two')
+def dht_two():
+    return jsonify(dht_sensor('two'))
+
+
+@app.route('/dht/three')
+def dht_three():
+    return jsonify(dht_sensor('three'))
+
+
+@app.route('/sensor/upload', methods=('POST',))
+def sensor_upload():
+    try:
+        json_obj = json.loads(request.get_data().decode("utf-8"))
+        file_path = '/dev/shm/sensor.' + json_obj['chip'] + '.log'
+        with open(file_path, 'w') as f:
+            json_obj['add_time'] = int(os.stat(file_path).st_mtime)
+            f.write(json.dumps(json_obj))
+    except:
+        pass
+
+    return ""
+
+
 @app.route('/loop')
 def get_sensor_data_loop():
     def inner_loop(device, sensor_fun):
         try:
             data = sensor_fun()
+            if not data:
+                return
+
             if 'add_time' not in data:
                 data['add_time'] = int(time.time())
 
@@ -257,9 +307,11 @@ def get_sensor_data_loop():
     inner_loop('nas', nas_sensor)
     inner_loop('route', route_sensor)
     inner_loop('pi', pi_sensor)
-    inner_loop('room', room_sensor)
+    # inner_loop('room', room_sensor)
+    inner_loop('dht_one', dht_one_sensor)
+    inner_loop('dht_two', dht_two_sensor)
+    inner_loop('dht_three', dht_three_sensor)
 
     return make_response('success')
-
 
 # app.run(host='0.0.0.0', debug=True, port=92)
