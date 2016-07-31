@@ -219,9 +219,14 @@ def sensor_json():
                 last_add_time = v['add_time']
                 temperature_data[device][data_key].append(float(v[data_key]))
 
+            while_flag = 0
             while last_add_time < v['add_time']:
-                temperature_data[device][data_key].append(float(v[data_key]))
+                if while_flag > 1:
+                    temperature_data[device][data_key].append(None)  # Is no data in this point
+                else:
+                    temperature_data[device][data_key].append(float(v[data_key]))
                 last_add_time += POINT_INTERVAL
+                while_flag += 1
 
         if data_key not in temperature_data[device]:  # Delete when no data
             del temperature_data[device]
@@ -283,7 +288,8 @@ def sensor_upload():
         json_obj = json.loads(request.get_data().decode("utf-8"))
         file_path = '/dev/shm/sensor.' + json_obj['chip'] + '.log'
         with open(file_path, 'w') as f:
-            json_obj['add_time'] = int(os.stat(file_path).st_mtime)
+            # json_obj['add_time'] = int(os.stat(file_path).st_mtime)
+            json_obj['add_time'] = int(time.time())
             f.write(json.dumps(json_obj))
     except:
         pass
@@ -316,5 +322,6 @@ def get_sensor_data_loop():
     inner_loop('dht_three', dht_three_sensor)
 
     return make_response('success')
+
 
 # app.run(host='0.0.0.0', debug=True, port=92)
