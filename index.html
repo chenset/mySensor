@@ -32,13 +32,10 @@
     </style>
 </head>
 <body>
-<ul class="box-wrap">
-</ul>
-
-<div style="clear: both;" id="containers-wrap">
-</div>
-<script src="{{ url_for('static',filename='js/jquery-2.1.1.min.js') }}"></script>
-<script src="{{ url_for('static',filename='js/highcharts.js') }}"></script>
+<ul class="box-wrap"></ul>
+<div style="clear: both;" id="containers-wrap"></div>
+<script src="/static/js/jquery-2.1.1.min.js"></script>
+<script src="/static/js/highcharts.js"></script>
 <script>
 
     Highcharts.setOptions({
@@ -48,7 +45,7 @@
     });
 
     $.ajax({
-        method: 'GET',
+        method: 'get',
         url: 'http://chenset.iok.la:59369/nas?route=sensor',
         cache: false,
         success: function (data) {
@@ -57,7 +54,7 @@
                 if (!data.hasOwnProperty(i)) {
                     continue;
                 }
-                html += ' <li class="box"><h4>' + i + '</h4><div class="value nas-cpu">' + data[i] + '</div></li>';
+                html += '                    <li class="box">                    <h4>' + i + '</h4>                    <div class="value nas-cpu">' + data[i] + '</div>     </li>';
             }
 
             $('.box-wrap').append(html);
@@ -76,7 +73,7 @@
                 if (!chartData.hasOwnProperty(k)) {
                     continue;
                 }
-               console.log(chartData[k]);
+                console.log(chartData[k]);
                 Highcharts.setOptions({
                     colors: [
                         Highcharts.Color(chartData[k]['color']).setOpacity(0.8).get('rgba')
@@ -104,8 +101,8 @@
             },
             subtitle: {
                 text: document.ontouchstart === undefined ?
-                        'Click and drag in the plot area to zoom in' :
-                        'Pinch the chart to zoom in'
+                    'Click and drag in the plot area to zoom in' :
+                    'Pinch the chart to zoom in'
             },
             xAxis: {
                 type: 'datetime',
@@ -163,6 +160,7 @@
         });
 
     }
+
 </script>
 </body>
 </html>
