@@ -1,3 +1,6 @@
-For myself
+### Devices
+- DHT22
+- NAS
+- R7000
 
-[https://sensor.flysay.com](https://sensor.flysay.com)
+[http://sensor.flysay.com](http://sensor.flysay.com)
